@@ -1,91 +1,168 @@
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from './page.module.css'
+"use client";
 
-const inter = Inter({ subsets: ['latin'] })
+import "./globals.css";
+import { useEffect, useState } from "react";
+import { logInGithub, logInGoogle, logOut } from "../../firebase/authUser";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth, db } from "../../firebase/config";
+import { addTask, updateTask } from "../../firebase/firestoreUser";
+import { collection, query, onSnapshot, where } from "firebase/firestore";
+import { BsGithub, BsGoogle } from "react-icons/bs";
+import Task from "@/components/Task";
 
 export default function Home() {
+  const [tasks, setTasks] = useState([]);
+  const [user, loading, error] = useAuthState(auth);
+  const [newTask, setNewTask] = useState({
+    owner: "",
+    title: "",
+    description: "",
+  });
+
+  useEffect(() => {
+    const getData = () => {
+      const unsub = onSnapshot(
+        query(
+          collection(db, "tasks"),
+          where("owner", "==", user ? user.uid : "")
+        ),
+        (querySnapshot) => {
+          const list = [];
+          querySnapshot.forEach((doc) => {
+            list.push({ id: doc.id, ...doc.data() });
+          });
+          setTasks(list);
+        }
+      );
+      return () => {
+        unsub();
+      };
+    };
+    getData();
+  }, [user]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!newTask.title && !newTask.description) {
+      return;
+    }
+    await addTask(newTask);
+    setNewTask({
+      owner: "",
+      title: "",
+      description: "",
+    });
+  };
+
+  const handleChange = (e) => {
+    setNewTask({
+      ...newTask,
+      owner: user.uid,
+      [e.target.name]: e.target.value,
+    });
+  };
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    await updateTask(newTask);
+    setNewTask({
+      owner: "",
+      title: "",
+      description: "",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <p>Initialising User...</p>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div>
+        <p>Error: {error}</p>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <main className="flex flex-col items-center justify-center h-screen text-gray-800">
+        <div className="bg-slate-500 w-full mb-5 flex flex-col justify-center items-center text-center py-2 text-white font-semibold">
+          <h2>
+            <span className="font-light text-base">name:</span>{" "}
+            {user.displayName}
+          </h2>
+          <h3>
+            <span className="font-light text-base">email:</span> {user.email}
+          </h3>
+        </div>
+        <p className="font-light uppercase tracking-wider">firebase-test</p>
+        <p className=" font-light italic text-sm">Add some tasks...</p>
+        <form
+          onSubmit={newTask.id ? handleUpdate : handleSubmit}
+          className="flex flex-col items-center gap-4 m-4 w-60"
+        >
+          <input
+            type="text"
+            placeholder="task title..."
+            name="title"
+            value={newTask.title}
+            onChange={handleChange}
+            className="input-form"
+          />
+          <textarea
+            placeholder="description..."
+            name="description"
+            value={newTask.description}
+            onChange={handleChange}
+            rows={5}
+            className="input-form"
+          />
+          <button className="py-2 px-4 w-fit bg-lime-500 text-white rounded-full shadow-animate border text-xl">
+            {newTask.id ? "Update task" : "Add task"}
+          </button>
+        </form>
+        <button
+          onClick={logOut}
+          className="py-2 px-4 bg-red-500 text-white rounded-full shadow-animate border text-xl"
+        >
+          Log Out
+        </button>
+        <div className="grid grid-cols-3 gap-2 mt-10">
+          {tasks?.map((task) => (
+            <Task key={task.id} task={task} setNewTask={setNewTask} />
+          ))}
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.jsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
+    <main className="flex flex-col items-center justify-center h-screen text-gray-800">
+      <p className="font-light uppercase tracking-wider text-sm">
+        firebase-test
+      </p>
+      <h1 className="tracking-widest uppercase font-bold text-5xl mb-10">
+        Welc<span className="text-red-500">o</span>me
+      </h1>
+      <div className="flex flex-col gap-3 text-2xl">
+        <button
+          onClick={logInGoogle}
+          className="login-button inline-flex items-center gap-2"
         >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
+          <BsGoogle />
+          Log In with Google
+        </button>
+        <button
+          onClick={logInGithub}
+          className="login-button inline-flex items-center gap-2"
         >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+          <BsGithub />
+          Log In with GitHub
+        </button>
       </div>
     </main>
-  )
+  );
 }
