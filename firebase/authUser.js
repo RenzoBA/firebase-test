@@ -39,9 +39,9 @@ export const logInGithub = async () => {
   }
 };
 
-export const logOut = () => {
+export const logOut = async () => {
   try {
-    signOut(auth);
+    await signOut(auth);
   } catch (error) {
     throw new Error("ERROR: " + error);
   }

@@ -1,4 +1,4 @@
-import { deleteTask, updateTask } from "../../firebase/firestoreUser";
+import { deleteTask } from "../../firebase/firestoreUser";
 import { BsPencil, BsTrash } from "react-icons/bs";
 
 const Task = ({ task: { title, description, owner, id }, setNewTask }) => {
